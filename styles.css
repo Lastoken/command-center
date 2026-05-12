@@ -1740,7 +1740,7 @@ button { font-family: inherit; }
    The red flagged rule below has higher specificity and wins for flagged
    days. The "today" cell already has its own treatment so we skip it. */
 .cal-cell.has-tasks:not(.has-flag):not(.today) {
-  outline: 1px solid rgba(38, 87, 214, 0.5);
+  outline: 1px solid rgba(38, 87, 214, 0.75);
   outline-offset: -1px;
 }
 

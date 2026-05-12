@@ -1727,17 +1727,48 @@ button { font-family: inherit; }
   font-weight: 400;
 }
 
-/* Calendar — red dot in month grid and red highlight in day-detail rows. */
-.cal-cell .d-dots .dot.flag {
-  background: var(--rust);
-  box-shadow: 0 0 0 1px rgba(178,80,60,0.25);
+/* Calendar — make flagged days unmistakable.
+   Visual stack (so it works alongside .today and .selected states):
+     - faint red wash on the cell background (when not today)
+     - red corner triangle in the top-right (always visible)
+     - thicker red ring around the cell
+     - red, bold day number (when not today — today keeps its blue circle)
+     - bigger red dot in the per-task d-dots row */
+.cal-cell.has-flag {
+  outline: 1.5px solid var(--rust);
+  outline-offset: -1px;
 }
-.cal-cell.has-flag .d-num {
+.cal-cell.has-flag:not(.today):not(.selected) {
+  background: rgba(177, 53, 43, 0.08);
+}
+.cal-cell.has-flag:hover {
+  background: rgba(177, 53, 43, 0.14);
+}
+.cal-cell.has-flag::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 10px 10px 0;
+  border-color: transparent var(--rust) transparent transparent;
+  pointer-events: none;
+  border-top-right-radius: 6px;
+}
+.cal-cell.has-flag:not(.today) .d-num {
   color: var(--rust);
-  font-weight: 600;
+  font-weight: 700;
 }
+.cal-cell .d-dots .dot.flag {
+  width: 7px;
+  height: 7px;
+  background: var(--rust);
+  box-shadow: 0 0 0 2px rgba(178, 80, 60, 0.28);
+}
+
+/* Day-detail rows */
 .cal-row.flagged {
-  background: rgba(178, 80, 60, 0.05);
+  background: rgba(178, 80, 60, 0.07);
   box-shadow: inset 3px 0 0 var(--rust);
 }
 .cal-row.flagged .title { color: var(--rust); font-weight: 500; }

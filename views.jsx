@@ -149,9 +149,39 @@ const ProjectFormModal = ({ projectId }) => {
 };
 
 /* ─────────── Kinds editor (项目类别管理) ─────────── */
+// 8-swatch picker for choosing a category's sticky-note color. `sky` is the
+// reserved color for 杂事 (loose tasks) — disabled here so categories can't
+// collide with the universal loose-task color.
+const KindColorPicker = ({ value, onChange }) => (
+  <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+    {KIND_COLORS.map(c => {
+      const reserved = c.id === LOOSE_COLOR_ID;
+      const selected = value === c.id;
+      return (
+        <button
+          key={c.id}
+          type="button"
+          title={reserved ? `${c.label}（杂事专用）` : c.label}
+          disabled={reserved}
+          onClick={() => onChange(c.id)}
+          style={{
+            width: 18, height: 18, borderRadius: 4, padding: 0,
+            background: c.bg,
+            border: '2px solid ' + (selected ? '#1a1d23' : c.border),
+            cursor: reserved ? 'not-allowed' : 'pointer',
+            opacity: reserved ? 0.35 : 1,
+            flexShrink: 0,
+          }}
+        />
+      );
+    })}
+  </div>
+);
+
 const KindsEditorModal = () => {
   const { kinds, projects } = useStore();
   const [adding, setAdding] = React.useState('');
+  const [addingColor, setAddingColor] = React.useState('cream');
   const usage = React.useMemo(() => {
     const m = {};
     projects.forEach(p => { m[p.kind] = (m[p.kind] || 0) + 1; });
@@ -161,16 +191,20 @@ const KindsEditorModal = () => {
   const add = () => {
     const v = adding.trim();
     if (!v) return;
-    Store.addKind(v);
+    Store.addKind(v, addingColor);
     setAdding('');
+    setAddingColor('cream');
   };
 
   return (
     <Modal
       title="项目类别 · 管理"
       onClose={closeModal}
-      width={440}
+      width={560}
       footer={<button className="btn primary sm" onClick={closeModal}>完成</button>}>
+      <div style={{ fontSize: 11.5, color: 'var(--fg-faint)', marginBottom: 10 }}>
+        颜色 = 这个类别的"便签纸"颜色，会显示在日历上。天蓝色保留给"杂事"，不可用。
+      </div>
       <div style={{ marginBottom: 14 }}>
         {kinds.length === 0 && (
           <div style={{ fontSize: 12.5, color: 'var(--fg-faint)', padding: '8px 0' }}>暂无类别，下方添加一个。</div>
@@ -180,11 +214,12 @@ const KindsEditorModal = () => {
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '6px 0', borderBottom: '1px solid var(--line-faint)',
           }}>
+            <KindColorPicker value={k.color || 'cream'} onChange={(c) => Store.updateKind(k.id, { color: c })} />
             <input
               type="text"
               value={k.label}
-              onChange={(e) => Store.updateKind(k.id, e.target.value)}
-              style={{ ...FIELD_STYLE, flex: 1 }}
+              onChange={(e) => Store.updateKind(k.id, { label: e.target.value })}
+              style={{ ...FIELD_STYLE, flex: 1, minWidth: 0 }}
             />
             <span style={{
               fontFamily: 'var(--font-mono)', fontSize: 11,
@@ -215,14 +250,15 @@ const KindsEditorModal = () => {
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <KindColorPicker value={addingColor} onChange={setAddingColor} />
         <input
           type="text"
           value={adding}
           onChange={(e) => setAdding(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
           placeholder="新类别名 · 回车添加"
-          style={{ ...FIELD_STYLE, flex: 1 }}
+          style={{ ...FIELD_STYLE, flex: 1, minWidth: 0 }}
         />
         <button className="btn primary sm" onClick={add}>添加</button>
       </div>

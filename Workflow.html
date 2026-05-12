@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=d81f5b18">
+<link rel="stylesheet" href="styles.css?v=d0f5eed6">
 </head>
 <body>
 <div id="root"></div>
@@ -87,16 +87,31 @@ const STAGE = {
 };
 const STAGE_LIST = ['research','decide','execute','verify','done','parked'];
 
+// Sticky-note palette. Each entry has a pastel `bg` (the chip body) and a
+// slightly darker `border`. `sky` is reserved for loose tasks (杂事) so don't
+// use it as a default project-kind color.
+const KIND_COLORS = [
+  { id: 'cream',    label: '米黄',   bg: '#fef3c7', border: '#f4d976' },
+  { id: 'apricot',  label: '杏色',   bg: '#fed7aa', border: '#fbb074' },
+  { id: 'mint',     label: '薄荷',   bg: '#bbf7d0', border: '#86e3a8' },
+  { id: 'sky',      label: '天蓝',   bg: '#bfdbfe', border: '#84b6f7' },
+  { id: 'sage',     label: '鼠尾草', bg: '#d1d5db', border: '#a1abb6' },
+  { id: 'pink',     label: '樱粉',   bg: '#fbcfe8', border: '#f190c6' },
+  { id: 'lavender', label: '薰衣草', bg: '#e0d7f8', border: '#b9a4ea' },
+  { id: 'coral',    label: '浅珊瑚', bg: '#fecaca', border: '#f88e8e' },
+];
+const LOOSE_COLOR_ID = 'sky'; // 杂事 (loose tasks) always use 天蓝, not configurable.
+
 // KIND is now seeded into localStorage and editable. The const stays as a
 // fallback so old code referring to `KIND[p.kind]` still resolves common ids
 // even if a user wiped their list. Live data flows through useStore().kinds.
 const KIND = {
-  capital:    { id: 'capital',    label: '资产/投资' },
-  process:    { id: 'process',    label: '流程优化' },
-  diagnose:   { id: 'diagnose',   label: '经营诊断' },
-  business:   { id: 'business',   label: '商务/客户' },
-  compliance: { id: 'compliance', label: '合规' },
-  org:        { id: 'org',        label: '组织/人员' },
+  capital:    { id: 'capital',    label: '资产/投资', color: 'apricot' },
+  process:    { id: 'process',    label: '流程优化',  color: 'mint' },
+  diagnose:   { id: 'diagnose',   label: '经营诊断',  color: 'coral' },
+  business:   { id: 'business',   label: '商务/客户', color: 'pink' },
+  compliance: { id: 'compliance', label: '合规',     color: 'sage' },
+  org:        { id: 'org',        label: '组织/人员', color: 'lavender' },
 };
 const DEFAULT_KINDS = Object.values(KIND);
 
@@ -641,20 +656,25 @@ const Store = (function () {
     },
 
     // ─────── Kinds (project categories) ───────
-    addKind(label) {
+    addKind(label, color) {
       const trimmed = String(label || '').trim();
       if (!trimmed) return null;
       const id = 'k-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-      const k = { id, label: trimmed };
+      const k = { id, label: trimmed, color: color || 'cream' };
       state.kinds = [...state.kinds, k];
       persist('kinds');
       notify();
       return id;
     },
-    updateKind(id, label) {
-      const trimmed = String(label || '').trim();
-      if (!trimmed) return;
-      state.kinds = state.kinds.map(k => k.id === id ? { ...k, label: trimmed } : k);
+    updateKind(id, patch) {
+      // Accept either a label string (back-compat) or a patch object.
+      const p = typeof patch === 'string' ? { label: patch } : (patch || {});
+      if ('label' in p) {
+        const t = String(p.label || '').trim();
+        if (!t) return;
+        p.label = t;
+      }
+      state.kinds = state.kinds.map(k => k.id === id ? { ...k, ...p } : k);
       persist('kinds');
       notify();
     },
@@ -752,6 +772,18 @@ function kindLabel(kindId, liveKinds) {
   if (hit) return hit.label;
   if (KIND[kindId]) return KIND[kindId].label;
   return kindId;
+}
+
+// Resolve a kind id to its current color entry (one of KIND_COLORS).
+// Same fallback chain as kindLabel; returns `cream` as the final default.
+function kindColor(kindId, liveKinds) {
+  const arr = Array.isArray(liveKinds) ? liveKinds : Store.getState().kinds || [];
+  const hit = arr.find(k => k.id === kindId);
+  let colorId = (hit && hit.color) || (KIND[kindId] && KIND[kindId].color) || 'cream';
+  return KIND_COLORS.find(c => c.id === colorId) || KIND_COLORS[0];
+}
+function looseColor() {
+  return KIND_COLORS.find(c => c.id === LOOSE_COLOR_ID) || KIND_COLORS[0];
 }
 
 /* ───────────────────── Gist sync ─────────────────────
@@ -1097,8 +1129,8 @@ function ConfirmDialog({ title, message, confirmLabel = '确认', danger, onConf
 }
 
 Object.assign(window, {
-  STAGE, STAGE_LIST, KIND, COMMANDS,
-  Store, useStore, fuzzyMatch, dailyPick, kindLabel,
+  STAGE, STAGE_LIST, KIND, COMMANDS, KIND_COLORS, LOOSE_COLOR_ID,
+  Store, useStore, fuzzyMatch, dailyPick, kindLabel, kindColor, looseColor,
   GistSync,
   openModal, closeModal, registerModalSetter,
   Modal, Field, TextInput, TextArea, Select, ConfirmDialog,
@@ -1814,19 +1846,31 @@ window.stageColor = stageColor;
 
 const TODAY = '2026-05-12';
 
-// Filled flag used in calendar cells — chunky enough to read at a glance.
-// Color is driven by the `mini-flag.flagged` CSS class so the "today" cell
-// can override (white on blue background).
-const MiniFlag = ({ flagged }) => (
-  <svg
-    className={`mini-flag ${flagged ? 'flagged' : ''}`}
-    width={14} height={14} viewBox="0 0 24 24"
-    aria-hidden="true"
-    style={{ flexShrink: 0 }}>
-    <rect x="4" y="3" width="2.6" height="18.5" fill="currentColor" rx="0.6" />
-    <path d="M6.6 3.6h13l-3 4.4 3 4.4h-13z" fill="currentColor" />
-  </svg>
-);
+// Resolve the sticky-note color + short label for any calendar task.
+// Project actions use their project's kind color and project code.
+// Loose tasks use the universal sky-blue and their tag (or "杂事").
+function stickyFor(task, kindMap, projectMap) {
+  if (task.kind === 'project') {
+    const p = projectMap[task.project];
+    const c = kindColor(p && p.kind, kindMap ? Object.values(kindMap) : undefined);
+    return { bg: c.bg, border: c.border, label: (p && p.code) || '—', title: (p ? p.name : '') };
+  }
+  const c = looseColor();
+  return { bg: c.bg, border: c.border, label: task.tag || '杂事', title: task.title };
+}
+
+// Tiny colored sticky-note pill rendered inside a calendar cell.
+const StickyChip = ({ task, kindMap, projectMap }) => {
+  const s = stickyFor(task, kindMap, projectMap);
+  return (
+    <div
+      className="sticky-chip"
+      title={`${s.title || task.title}${task.flagged ? ' · 重要' : ''}`}
+      style={{ background: s.bg, borderColor: s.border }}>
+      {s.label}
+    </div>
+  );
+};
 
 function fmtClock(date, tz) {
   try {
@@ -2213,7 +2257,7 @@ const HOLIDAYS = new Set(['2026-05-01', '2026-05-05', '2026-05-21', '2026-06-05'
 const fmtIso = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
 const CalendarPanel = ({ openProject }) => {
-  const { actions, looseTasks, projectMap } = useStore();
+  const { actions, looseTasks, projectMap, kindMap } = useStore();
   const [cursor, setCursor] = React.useState({ y: 2026, m: 5 }); // 1-indexed month
   const [selected, setSelected] = React.useState(TODAY);
 
@@ -2314,9 +2358,9 @@ const CalendarPanel = ({ openProject }) => {
               {sortedTasks.length > 0 && (
                 <div className="d-dots">
                   {sortedTasks.slice(0, 3).map((t, i) => (
-                    <MiniFlag key={i} flagged={t.flagged} />
+                    <StickyChip key={i} task={t} kindMap={kindMap} projectMap={projectMap} />
                   ))}
-                  {sortedTasks.length > 3 && <span className="dot more">+{sortedTasks.length - 3}</span>}
+                  {sortedTasks.length > 3 && <div className="sticky-more">+{sortedTasks.length - 3}</div>}
                 </div>
               )}
             </div>
@@ -2345,7 +2389,7 @@ const CalendarPanel = ({ openProject }) => {
               if (cmp !== 0) return cmp;
               return (a.title || '').localeCompare(b.title || '', 'zh-Hans-CN');
             }).map(item => (
-              <CalRow key={item.kind + item.id} item={item} openProject={openProject} projectMap={projectMap} />
+              <CalRow key={item.kind + item.id} item={item} openProject={openProject} projectMap={projectMap} kindMap={kindMap} />
             ))
           )}
         </div>
@@ -2365,28 +2409,29 @@ const FlagDot = () => (
   />
 );
 
-const CalRow = ({ item, openProject, projectMap }) => {
-  if (item.kind === 'project') {
+const CalRow = ({ item, openProject, projectMap, kindMap }) => {
+  const s = stickyFor(item, kindMap, projectMap);
+  const isProject = item.kind === 'project';
+  const onClick = isProject ? () => {
     const p = projectMap[item.project];
-    if (!p) return null;
-    return (
-      <div className={`cal-row ${item.flagged ? 'flagged' : ''}`} onClick={() => openProject(p.id)}>
-        {item.flagged && <FlagDot />}
-        <span className={`cal-tag proj`}>项目</span>
-        <span className="code">{p.code}</span>
-        <span className="title">{item.title}</span>
-        {item.waitingOn === 'me' && <span className="chip amber sm">ME</span>}
-        {item.waitingOn === 'external' && <span className="chip steel sm">外部</span>}
-        {item.waitingOn === 'team' && <span className="chip dim sm">团队</span>}
-      </div>
-    );
-  }
+    if (p) openProject(p.id);
+  } : null;
+  if (isProject && !projectMap[item.project]) return null;
   return (
-    <div className={`cal-row ${item.flagged ? 'flagged' : ''}`}>
+    <div
+      className={`cal-row ${item.flagged ? 'flagged' : ''}`}
+      style={onClick ? { cursor: 'pointer' } : null}
+      onClick={onClick}>
       {item.flagged && <FlagDot />}
-      <span className={`cal-tag loose`}>杂事</span>
+      <span
+        className="sticky-chip cal-detail-sticky"
+        style={{ background: s.bg, borderColor: s.border }}>
+        {s.label}
+      </span>
       <span className="title">{item.title}</span>
-      {item.tag && <span className="chip dim sm">{item.tag}</span>}
+      {isProject && item.waitingOn === 'me' && <span className="chip amber sm">ME</span>}
+      {isProject && item.waitingOn === 'external' && <span className="chip steel sm">外部</span>}
+      {isProject && item.waitingOn === 'team' && <span className="chip dim sm">团队</span>}
     </div>
   );
 };
@@ -2564,9 +2609,39 @@ const ProjectFormModal = ({ projectId }) => {
 };
 
 /* ─────────── Kinds editor (项目类别管理) ─────────── */
+// 8-swatch picker for choosing a category's sticky-note color. `sky` is the
+// reserved color for 杂事 (loose tasks) — disabled here so categories can't
+// collide with the universal loose-task color.
+const KindColorPicker = ({ value, onChange }) => (
+  <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+    {KIND_COLORS.map(c => {
+      const reserved = c.id === LOOSE_COLOR_ID;
+      const selected = value === c.id;
+      return (
+        <button
+          key={c.id}
+          type="button"
+          title={reserved ? `${c.label}（杂事专用）` : c.label}
+          disabled={reserved}
+          onClick={() => onChange(c.id)}
+          style={{
+            width: 18, height: 18, borderRadius: 4, padding: 0,
+            background: c.bg,
+            border: '2px solid ' + (selected ? '#1a1d23' : c.border),
+            cursor: reserved ? 'not-allowed' : 'pointer',
+            opacity: reserved ? 0.35 : 1,
+            flexShrink: 0,
+          }}
+        />
+      );
+    })}
+  </div>
+);
+
 const KindsEditorModal = () => {
   const { kinds, projects } = useStore();
   const [adding, setAdding] = React.useState('');
+  const [addingColor, setAddingColor] = React.useState('cream');
   const usage = React.useMemo(() => {
     const m = {};
     projects.forEach(p => { m[p.kind] = (m[p.kind] || 0) + 1; });
@@ -2576,16 +2651,20 @@ const KindsEditorModal = () => {
   const add = () => {
     const v = adding.trim();
     if (!v) return;
-    Store.addKind(v);
+    Store.addKind(v, addingColor);
     setAdding('');
+    setAddingColor('cream');
   };
 
   return (
     <Modal
       title="项目类别 · 管理"
       onClose={closeModal}
-      width={440}
+      width={560}
       footer={<button className="btn primary sm" onClick={closeModal}>完成</button>}>
+      <div style={{ fontSize: 11.5, color: 'var(--fg-faint)', marginBottom: 10 }}>
+        颜色 = 这个类别的"便签纸"颜色，会显示在日历上。天蓝色保留给"杂事"，不可用。
+      </div>
       <div style={{ marginBottom: 14 }}>
         {kinds.length === 0 && (
           <div style={{ fontSize: 12.5, color: 'var(--fg-faint)', padding: '8px 0' }}>暂无类别，下方添加一个。</div>
@@ -2595,11 +2674,12 @@ const KindsEditorModal = () => {
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '6px 0', borderBottom: '1px solid var(--line-faint)',
           }}>
+            <KindColorPicker value={k.color || 'cream'} onChange={(c) => Store.updateKind(k.id, { color: c })} />
             <input
               type="text"
               value={k.label}
-              onChange={(e) => Store.updateKind(k.id, e.target.value)}
-              style={{ ...FIELD_STYLE, flex: 1 }}
+              onChange={(e) => Store.updateKind(k.id, { label: e.target.value })}
+              style={{ ...FIELD_STYLE, flex: 1, minWidth: 0 }}
             />
             <span style={{
               fontFamily: 'var(--font-mono)', fontSize: 11,
@@ -2630,14 +2710,15 @@ const KindsEditorModal = () => {
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <KindColorPicker value={addingColor} onChange={setAddingColor} />
         <input
           type="text"
           value={adding}
           onChange={(e) => setAdding(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
           placeholder="新类别名 · 回车添加"
-          style={{ ...FIELD_STYLE, flex: 1 }}
+          style={{ ...FIELD_STYLE, flex: 1, minWidth: 0 }}
         />
         <button className="btn primary sm" onClick={add}>添加</button>
       </div>

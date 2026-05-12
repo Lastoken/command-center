@@ -1285,6 +1285,20 @@ button { font-family: inherit; }
   font-weight: 600;
   flex-shrink: 0;
 }
+/* The sticky-chip in the day-detail row (under the calendar) gets a little
+   more breathing room than the in-cell version since horizontal space is
+   plentiful. Color still comes from inline style. */
+.cal-row .sticky-chip.cal-detail-sticky {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  color: rgba(0, 0, 0, 0.78);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
 .cal-tag.proj {
   color: var(--accent);
   background: rgba(38, 87, 214, 0.08);
@@ -1463,8 +1477,8 @@ button { font-family: inherit; }
 }
 .cal-cell {
   position: relative;
-  min-height: 62px;
-  padding: 6px 6px 4px;
+  min-height: 90px;
+  padding: 6px 6px 8px;
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.1s;
@@ -1508,24 +1522,41 @@ button { font-family: inherit; }
 .cal-cell .d-lun.holiday { color: var(--rust); font-weight: 500; }
 .cal-cell.today .d-lun.holiday { color: rgba(255,255,255,0.95); }
 
+/* Sticky-note stack inside a calendar cell. Vertical column of small
+   colored pills, one per task. Background color comes from the task's
+   kind (via inline style); the .sticky-chip class only controls layout. */
 .cal-cell .d-dots {
-  display: flex; gap: 4px; align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin-top: 4px;
-  min-height: 14px;
+  align-items: stretch;
 }
-.cal-cell .d-dots .mini-flag { color: var(--accent); }
-.cal-cell .d-dots .mini-flag.flagged { color: var(--rust); }
-.cal-cell .d-dots .dot.more {
-  width: auto; height: auto; border-radius: 2px;
-  font-family: var(--font-mono); font-size: 9px; color: var(--fg-muted);
-  background: transparent; padding: 0;
+.cal-cell .sticky-chip {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.35;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  color: rgba(0, 0, 0, 0.78);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
 }
-/* On "today" the cell background is blue, so plain-blue flags would
-   disappear. Flip non-flagged flags to white; flagged ones stay red — the
-   priority distinction is more useful here than the today/non-today one. */
-.cal-cell.today .d-dots .mini-flag { color: white; }
-.cal-cell.today .d-dots .mini-flag.flagged { color: var(--rust); }
-.cal-cell.today .d-dots .dot.more { color: rgba(255,255,255,0.85); }
+.cal-cell .sticky-more {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--fg-muted);
+  padding: 0 4px;
+  text-align: right;
+}
+/* On the "today" cell the background is blue-tinted; pastel stickies still
+   read fine against that. Just slightly bump opacity for the +N indicator. */
+.cal-cell.today .sticky-more { color: rgba(255,255,255,0.9); }
 
 .cal-detail {
   border-top: 1px solid var(--line-faint);
@@ -1654,11 +1685,10 @@ button { font-family: inherit; }
 
   /* Calendar: smaller cells. */
   .calendar-panel { padding: 10px; }
-  .cal-cell { min-height: 52px; padding: 4px; font-size: 11px; }
+  .cal-cell { min-height: 72px; padding: 4px; font-size: 11px; }
   .cal-cell .d-num { font-size: 12px; }
   .cal-cell .d-lun { font-size: 9px; }
-  .cal-cell .d-dots { gap: 3px; min-height: 12px; }
-  .cal-cell .d-dots .mini-flag { width: 11px; height: 11px; }
+  .cal-cell .sticky-chip { font-size: 8.5px; padding: 0px 4px; }
 
   /* Tools: single column. */
   .tools-grid { grid-template-columns: 1fr !important; }
@@ -1736,14 +1766,9 @@ button { font-family: inherit; }
      - thicker red ring around the cell
      - red, bold day number (when not today — today keeps its blue circle)
      - bigger red dot in the per-task d-dots row */
-/* Any day with at least one task: thin blue outline.
-   The red flagged rule below has higher specificity and wins for flagged
-   days. The "today" cell already has its own treatment so we skip it. */
-.cal-cell.has-tasks:not(.has-flag):not(.today) {
-  outline: 1px solid rgba(38, 87, 214, 0.75);
-  outline-offset: -1px;
-}
-
+/* No outline for cells with regular tasks anymore — task type is now shown
+   via colored sticky-note chips inside the cell. Only flagged cells get a
+   red outline, kept below for the importance signal. */
 .cal-cell.has-flag {
   outline: 1.5px solid var(--rust);
   outline-offset: -1px;

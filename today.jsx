@@ -3,19 +3,31 @@
 
 const TODAY = '2026-05-12';
 
-// Filled flag used in calendar cells — chunky enough to read at a glance.
-// Color is driven by the `mini-flag.flagged` CSS class so the "today" cell
-// can override (white on blue background).
-const MiniFlag = ({ flagged }) => (
-  <svg
-    className={`mini-flag ${flagged ? 'flagged' : ''}`}
-    width={14} height={14} viewBox="0 0 24 24"
-    aria-hidden="true"
-    style={{ flexShrink: 0 }}>
-    <rect x="4" y="3" width="2.6" height="18.5" fill="currentColor" rx="0.6" />
-    <path d="M6.6 3.6h13l-3 4.4 3 4.4h-13z" fill="currentColor" />
-  </svg>
-);
+// Resolve the sticky-note color + short label for any calendar task.
+// Project actions use their project's kind color and project code.
+// Loose tasks use the universal sky-blue and their tag (or "杂事").
+function stickyFor(task, kindMap, projectMap) {
+  if (task.kind === 'project') {
+    const p = projectMap[task.project];
+    const c = kindColor(p && p.kind, kindMap ? Object.values(kindMap) : undefined);
+    return { bg: c.bg, border: c.border, label: (p && p.code) || '—', title: (p ? p.name : '') };
+  }
+  const c = looseColor();
+  return { bg: c.bg, border: c.border, label: task.tag || '杂事', title: task.title };
+}
+
+// Tiny colored sticky-note pill rendered inside a calendar cell.
+const StickyChip = ({ task, kindMap, projectMap }) => {
+  const s = stickyFor(task, kindMap, projectMap);
+  return (
+    <div
+      className="sticky-chip"
+      title={`${s.title || task.title}${task.flagged ? ' · 重要' : ''}`}
+      style={{ background: s.bg, borderColor: s.border }}>
+      {s.label}
+    </div>
+  );
+};
 
 function fmtClock(date, tz) {
   try {
@@ -402,7 +414,7 @@ const HOLIDAYS = new Set(['2026-05-01', '2026-05-05', '2026-05-21', '2026-06-05'
 const fmtIso = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
 const CalendarPanel = ({ openProject }) => {
-  const { actions, looseTasks, projectMap } = useStore();
+  const { actions, looseTasks, projectMap, kindMap } = useStore();
   const [cursor, setCursor] = React.useState({ y: 2026, m: 5 }); // 1-indexed month
   const [selected, setSelected] = React.useState(TODAY);
 
@@ -503,9 +515,9 @@ const CalendarPanel = ({ openProject }) => {
               {sortedTasks.length > 0 && (
                 <div className="d-dots">
                   {sortedTasks.slice(0, 3).map((t, i) => (
-                    <MiniFlag key={i} flagged={t.flagged} />
+                    <StickyChip key={i} task={t} kindMap={kindMap} projectMap={projectMap} />
                   ))}
-                  {sortedTasks.length > 3 && <span className="dot more">+{sortedTasks.length - 3}</span>}
+                  {sortedTasks.length > 3 && <div className="sticky-more">+{sortedTasks.length - 3}</div>}
                 </div>
               )}
             </div>
@@ -534,7 +546,7 @@ const CalendarPanel = ({ openProject }) => {
               if (cmp !== 0) return cmp;
               return (a.title || '').localeCompare(b.title || '', 'zh-Hans-CN');
             }).map(item => (
-              <CalRow key={item.kind + item.id} item={item} openProject={openProject} projectMap={projectMap} />
+              <CalRow key={item.kind + item.id} item={item} openProject={openProject} projectMap={projectMap} kindMap={kindMap} />
             ))
           )}
         </div>
@@ -554,28 +566,29 @@ const FlagDot = () => (
   />
 );
 
-const CalRow = ({ item, openProject, projectMap }) => {
-  if (item.kind === 'project') {
+const CalRow = ({ item, openProject, projectMap, kindMap }) => {
+  const s = stickyFor(item, kindMap, projectMap);
+  const isProject = item.kind === 'project';
+  const onClick = isProject ? () => {
     const p = projectMap[item.project];
-    if (!p) return null;
-    return (
-      <div className={`cal-row ${item.flagged ? 'flagged' : ''}`} onClick={() => openProject(p.id)}>
-        {item.flagged && <FlagDot />}
-        <span className={`cal-tag proj`}>项目</span>
-        <span className="code">{p.code}</span>
-        <span className="title">{item.title}</span>
-        {item.waitingOn === 'me' && <span className="chip amber sm">ME</span>}
-        {item.waitingOn === 'external' && <span className="chip steel sm">外部</span>}
-        {item.waitingOn === 'team' && <span className="chip dim sm">团队</span>}
-      </div>
-    );
-  }
+    if (p) openProject(p.id);
+  } : null;
+  if (isProject && !projectMap[item.project]) return null;
   return (
-    <div className={`cal-row ${item.flagged ? 'flagged' : ''}`}>
+    <div
+      className={`cal-row ${item.flagged ? 'flagged' : ''}`}
+      style={onClick ? { cursor: 'pointer' } : null}
+      onClick={onClick}>
       {item.flagged && <FlagDot />}
-      <span className={`cal-tag loose`}>杂事</span>
+      <span
+        className="sticky-chip cal-detail-sticky"
+        style={{ background: s.bg, borderColor: s.border }}>
+        {s.label}
+      </span>
       <span className="title">{item.title}</span>
-      {item.tag && <span className="chip dim sm">{item.tag}</span>}
+      {isProject && item.waitingOn === 'me' && <span className="chip amber sm">ME</span>}
+      {isProject && item.waitingOn === 'external' && <span className="chip steel sm">外部</span>}
+      {isProject && item.waitingOn === 'team' && <span className="chip dim sm">团队</span>}
     </div>
   );
 };

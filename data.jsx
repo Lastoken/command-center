@@ -12,16 +12,31 @@ const STAGE = {
 };
 const STAGE_LIST = ['research','decide','execute','verify','done','parked'];
 
+// Sticky-note palette. Each entry has a pastel `bg` (the chip body) and a
+// slightly darker `border`. `sky` is reserved for loose tasks (杂事) so don't
+// use it as a default project-kind color.
+const KIND_COLORS = [
+  { id: 'cream',    label: '米黄',   bg: '#fef3c7', border: '#f4d976' },
+  { id: 'apricot',  label: '杏色',   bg: '#fed7aa', border: '#fbb074' },
+  { id: 'mint',     label: '薄荷',   bg: '#bbf7d0', border: '#86e3a8' },
+  { id: 'sky',      label: '天蓝',   bg: '#bfdbfe', border: '#84b6f7' },
+  { id: 'sage',     label: '鼠尾草', bg: '#d1d5db', border: '#a1abb6' },
+  { id: 'pink',     label: '樱粉',   bg: '#fbcfe8', border: '#f190c6' },
+  { id: 'lavender', label: '薰衣草', bg: '#e0d7f8', border: '#b9a4ea' },
+  { id: 'coral',    label: '浅珊瑚', bg: '#fecaca', border: '#f88e8e' },
+];
+const LOOSE_COLOR_ID = 'sky'; // 杂事 (loose tasks) always use 天蓝, not configurable.
+
 // KIND is now seeded into localStorage and editable. The const stays as a
 // fallback so old code referring to `KIND[p.kind]` still resolves common ids
 // even if a user wiped their list. Live data flows through useStore().kinds.
 const KIND = {
-  capital:    { id: 'capital',    label: '资产/投资' },
-  process:    { id: 'process',    label: '流程优化' },
-  diagnose:   { id: 'diagnose',   label: '经营诊断' },
-  business:   { id: 'business',   label: '商务/客户' },
-  compliance: { id: 'compliance', label: '合规' },
-  org:        { id: 'org',        label: '组织/人员' },
+  capital:    { id: 'capital',    label: '资产/投资', color: 'apricot' },
+  process:    { id: 'process',    label: '流程优化',  color: 'mint' },
+  diagnose:   { id: 'diagnose',   label: '经营诊断',  color: 'coral' },
+  business:   { id: 'business',   label: '商务/客户', color: 'pink' },
+  compliance: { id: 'compliance', label: '合规',     color: 'sage' },
+  org:        { id: 'org',        label: '组织/人员', color: 'lavender' },
 };
 const DEFAULT_KINDS = Object.values(KIND);
 
@@ -566,20 +581,25 @@ const Store = (function () {
     },
 
     // ─────── Kinds (project categories) ───────
-    addKind(label) {
+    addKind(label, color) {
       const trimmed = String(label || '').trim();
       if (!trimmed) return null;
       const id = 'k-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-      const k = { id, label: trimmed };
+      const k = { id, label: trimmed, color: color || 'cream' };
       state.kinds = [...state.kinds, k];
       persist('kinds');
       notify();
       return id;
     },
-    updateKind(id, label) {
-      const trimmed = String(label || '').trim();
-      if (!trimmed) return;
-      state.kinds = state.kinds.map(k => k.id === id ? { ...k, label: trimmed } : k);
+    updateKind(id, patch) {
+      // Accept either a label string (back-compat) or a patch object.
+      const p = typeof patch === 'string' ? { label: patch } : (patch || {});
+      if ('label' in p) {
+        const t = String(p.label || '').trim();
+        if (!t) return;
+        p.label = t;
+      }
+      state.kinds = state.kinds.map(k => k.id === id ? { ...k, ...p } : k);
       persist('kinds');
       notify();
     },
@@ -677,6 +697,18 @@ function kindLabel(kindId, liveKinds) {
   if (hit) return hit.label;
   if (KIND[kindId]) return KIND[kindId].label;
   return kindId;
+}
+
+// Resolve a kind id to its current color entry (one of KIND_COLORS).
+// Same fallback chain as kindLabel; returns `cream` as the final default.
+function kindColor(kindId, liveKinds) {
+  const arr = Array.isArray(liveKinds) ? liveKinds : Store.getState().kinds || [];
+  const hit = arr.find(k => k.id === kindId);
+  let colorId = (hit && hit.color) || (KIND[kindId] && KIND[kindId].color) || 'cream';
+  return KIND_COLORS.find(c => c.id === colorId) || KIND_COLORS[0];
+}
+function looseColor() {
+  return KIND_COLORS.find(c => c.id === LOOSE_COLOR_ID) || KIND_COLORS[0];
 }
 
 /* ───────────────────── Gist sync ─────────────────────
@@ -1022,8 +1054,8 @@ function ConfirmDialog({ title, message, confirmLabel = '确认', danger, onConf
 }
 
 Object.assign(window, {
-  STAGE, STAGE_LIST, KIND, COMMANDS,
-  Store, useStore, fuzzyMatch, dailyPick, kindLabel,
+  STAGE, STAGE_LIST, KIND, COMMANDS, KIND_COLORS, LOOSE_COLOR_ID,
+  Store, useStore, fuzzyMatch, dailyPick, kindLabel, kindColor, looseColor,
   GistSync,
   openModal, closeModal, registerModalSetter,
   Modal, Field, TextInput, TextArea, Select, ConfirmDialog,

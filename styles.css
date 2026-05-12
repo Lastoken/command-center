@@ -1736,6 +1736,14 @@ button { font-family: inherit; }
      - thicker red ring around the cell
      - red, bold day number (when not today — today keeps its blue circle)
      - bigger red dot in the per-task d-dots row */
+/* Any day with at least one task: thin blue outline.
+   The red flagged rule below has higher specificity and wins for flagged
+   days. The "today" cell already has its own treatment so we skip it. */
+.cal-cell.has-tasks:not(.has-flag):not(.today) {
+  outline: 1px solid rgba(38, 87, 214, 0.5);
+  outline-offset: -1px;
+}
+
 .cal-cell.has-flag {
   outline: 1.5px solid var(--rust);
   outline-offset: -1px;

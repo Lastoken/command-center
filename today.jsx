@@ -3,6 +3,19 @@
 
 const TODAY = '2026-05-12';
 
+// Tiny filled flag used in calendar cells. Color is driven by the
+// `mini-flag.flagged` CSS class so the "today" cell can override.
+const MiniFlag = ({ flagged }) => (
+  <svg
+    className={`mini-flag ${flagged ? 'flagged' : ''}`}
+    width={10} height={10} viewBox="0 0 24 24"
+    aria-hidden="true"
+    style={{ flexShrink: 0 }}>
+    <path d="M5 4v17" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+    <path d="M5 4h13l-2.5 4 2.5 4H5z" fill="currentColor" />
+  </svg>
+);
+
 function fmtClock(date, tz) {
   try {
     return new Intl.DateTimeFormat('en-GB', {
@@ -489,7 +502,7 @@ const CalendarPanel = ({ openProject }) => {
               {sortedTasks.length > 0 && (
                 <div className="d-dots">
                   {sortedTasks.slice(0, 3).map((t, i) => (
-                    <span key={i} className={`dot ${t.flagged ? 'flag' : t.kind}`} />
+                    <MiniFlag key={i} flagged={t.flagged} />
                   ))}
                   {sortedTasks.length > 3 && <span className="dot more">+{sortedTasks.length - 3}</span>}
                 </div>

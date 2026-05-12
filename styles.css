@@ -1702,3 +1702,42 @@ button { font-family: inherit; }
 
 /* Hamburger button: hidden on desktop, shown on mobile via media query above. */
 .mobile-only { display: none; }
+
+
+/* ════════════════════════════════════════════════════════════════════════
+   Manual red-flag indicator on home tasks + calendar reflection
+   ════════════════════════════════════════════════════════════════════════ */
+.action-row.flagged,
+.loose-row.flagged {
+  box-shadow: inset 3px 0 0 var(--rust);
+  background: rgba(178, 80, 60, 0.04);
+}
+.action-row.flagged:hover,
+.loose-row.flagged:hover {
+  background: rgba(178, 80, 60, 0.08);
+}
+.action-row.flagged .title,
+.loose-row.flagged .title {
+  color: var(--rust);
+  font-weight: 500;
+}
+.action-row.flagged.done .title,
+.loose-row.flagged.done .title {
+  color: var(--fg-faint);
+  font-weight: 400;
+}
+
+/* Calendar — red dot in month grid and red highlight in day-detail rows. */
+.cal-cell .d-dots .dot.flag {
+  background: var(--rust);
+  box-shadow: 0 0 0 1px rgba(178,80,60,0.25);
+}
+.cal-cell.has-flag .d-num {
+  color: var(--rust);
+  font-weight: 600;
+}
+.cal-row.flagged {
+  background: rgba(178, 80, 60, 0.05);
+  box-shadow: inset 3px 0 0 var(--rust);
+}
+.cal-row.flagged .title { color: var(--rust); font-weight: 500; }

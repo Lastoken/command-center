@@ -1899,10 +1899,21 @@ const HomeView = ({ openProject }) => {
 };
 
 /* ──────────────── Project tasks panel ──────────────── */
+// Sort: undone first, then flagged-first inside each bucket, then by the
+// project code A-Z (so PRJ-018 lines up before PRJ-022), then by due date.
+const sortActions = (arr, projectMap) => arr.slice().sort((a, b) => {
+  if (!!a.flagged !== !!b.flagged) return a.flagged ? -1 : 1;
+  const pa = projectMap[a.project]?.code || '';
+  const pb = projectMap[b.project]?.code || '';
+  const codeCmp = pa.localeCompare(pb, 'zh-Hans-CN');
+  if (codeCmp !== 0) return codeCmp;
+  return (a.due || '9').localeCompare(b.due || '9');
+});
+
 const ProjectTasksPanel = ({ openProject }) => {
   const { actions, projects, projectMap } = useStore();
-  const open = actions.filter(t => !t.done).sort((a, b) => (a.due || '9').localeCompare(b.due || '9'));
-  const done = actions.filter(t => t.done);
+  const open = sortActions(actions.filter(t => !t.done), projectMap);
+  const done = sortActions(actions.filter(t => t.done), projectMap);
   const list = [...open, ...done];
 
   const addPrompt = () => {
@@ -1937,7 +1948,7 @@ const ProjectTasksPanel = ({ openProject }) => {
           return (
             <div
               key={a.id}
-              className={`action-row ${a.done ? 'done' : ''}`}
+              className={`action-row ${a.done ? 'done' : ''} ${a.flagged ? 'flagged' : ''}`}
               style={{ cursor: 'default' }}
             >
               <div
@@ -1968,6 +1979,8 @@ const ProjectTasksPanel = ({ openProject }) => {
                 {fmtDue(a.due, TODAY)}
               </span>
               <RowMenu
+                flagged={a.flagged}
+                onToggleFlag={() => Store.updateAction(a.id, { flagged: !a.flagged })}
                 onEdit={() => openModal(<ActionFormModal actionId={a.id} />)}
                 onDelete={() => openModal(<ConfirmDialog
                   title="删除行动项"
@@ -1986,14 +1999,26 @@ const ProjectTasksPanel = ({ openProject }) => {
 };
 
 /* ──────────────── Loose tasks panel ──────────────── */
+// Sort: undone first, then flagged-first inside each bucket, then tag A-Z
+// (empty-tag last), then due date.
+const sortLooseTasks = (arr) => arr.slice().sort((a, b) => {
+  if (!!a.flagged !== !!b.flagged) return a.flagged ? -1 : 1;
+  const ta = (a.tag || '').trim();
+  const tb = (b.tag || '').trim();
+  if (!ta && tb) return 1;
+  if (ta && !tb) return -1;
+  const tagCmp = ta.localeCompare(tb, 'zh-Hans-CN');
+  if (tagCmp !== 0) return tagCmp;
+  if (!a.due && b.due) return 1;
+  if (a.due && !b.due) return -1;
+  return (a.due || '').localeCompare(b.due || '');
+});
+
 const LooseTasksPanel = () => {
   const { looseTasks } = useStore();
-  const open = looseTasks.filter(t => !t.done);
-  const done = looseTasks.filter(t => t.done);
-  const sorted = [...open.sort((a, b) => {
-    if (!a.due) return 1; if (!b.due) return -1;
-    return a.due.localeCompare(b.due);
-  }), ...done];
+  const open = sortLooseTasks(looseTasks.filter(t => !t.done));
+  const done = sortLooseTasks(looseTasks.filter(t => t.done));
+  const sorted = [...open, ...done];
 
   return (
     <div className="panel">
@@ -2017,7 +2042,7 @@ const LooseTasksPanel = () => {
           const overdue = t.due && t.due < TODAY && !t.done;
           const isToday = t.due === TODAY;
           return (
-            <div key={t.id} className={`loose-row ${t.done ? 'done' : ''}`} onClick={() => Store.toggleLooseTask(t.id)}>
+            <div key={t.id} className={`loose-row ${t.done ? 'done' : ''} ${t.flagged ? 'flagged' : ''}`} onClick={() => Store.toggleLooseTask(t.id)}>
               <div className={`cb ${t.done ? 'checked' : ''}`}>
                 <svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>
               </div>
@@ -2027,6 +2052,11 @@ const LooseTasksPanel = () => {
                 {!t.due ? '有空' : fmtDue(t.due, TODAY)}
               </span>
               <RowMenu
+                flagged={t.flagged}
+                onToggleFlag={(e) => {
+                  e.stopPropagation();
+                  Store.updateLooseTask(t.id, { flagged: !t.flagged });
+                }}
                 onEdit={(e) => { e.stopPropagation(); openModal(<LooseTaskFormModal taskId={t.id} />); }}
                 onDelete={(e) => {
                   e.stopPropagation();
@@ -2048,7 +2078,7 @@ const LooseTasksPanel = () => {
 };
 
 /* ──────────────── Inline row menu (⋯) ──────────────── */
-const RowMenu = ({ onEdit, onDelete }) => {
+const RowMenu = ({ flagged, onToggleFlag, onEdit, onDelete }) => {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
   React.useEffect(() => {
@@ -2065,7 +2095,7 @@ const RowMenu = ({ onEdit, onDelete }) => {
         title="操作"
         style={{
           appearance: 'none', border: 'none', background: 'transparent',
-          color: 'var(--fg-faint)', cursor: 'pointer',
+          color: flagged ? 'var(--rust)' : 'var(--fg-faint)', cursor: 'pointer',
           width: 22, height: 22, borderRadius: 4,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         }}
@@ -2078,10 +2108,18 @@ const RowMenu = ({ onEdit, onDelete }) => {
         <div style={{
           position: 'absolute', right: 0, top: '100%', marginTop: 2,
           background: 'var(--bg-elev)', border: '1px solid var(--line)',
-          borderRadius: 6, padding: 4, minWidth: 100,
+          borderRadius: 6, padding: 4, minWidth: 110,
           boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
           zIndex: 50, fontSize: 12,
         }}>
+          {onToggleFlag && (
+            <div onClick={(e) => { setOpen(false); onToggleFlag(e); }}
+                 style={{ padding: '6px 10px', cursor: 'pointer', color: flagged ? 'var(--fg)' : 'var(--rust)', borderRadius: 4 }}
+                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+              {flagged ? '取消标红' : '标红'}
+            </div>
+          )}
           <div onClick={(e) => { setOpen(false); onEdit && onEdit(e); }}
                style={{ padding: '6px 10px', cursor: 'pointer', color: 'var(--fg)', borderRadius: 4 }}
                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -2196,7 +2234,13 @@ const CalendarPanel = ({ openProject }) => {
           ))}
         </div>
         <div className="cal-cells">
-          {cells.map(c => (
+          {cells.map(c => {
+            const sortedTasks = c.tasks.slice().sort((a, b) => {
+              if (!!a.flagged !== !!b.flagged) return a.flagged ? -1 : 1;
+              return 0;
+            });
+            const hasFlagged = sortedTasks.some(t => t.flagged);
+            return (
             <div
               key={c.iso}
               className={[
@@ -2206,21 +2250,23 @@ const CalendarPanel = ({ openProject }) => {
                 c.iso === selected ? 'selected' : '',
                 c.isWeekend ? 'we' : '',
                 c.tasks.length ? 'has-tasks' : '',
+                hasFlagged ? 'has-flag' : '',
               ].join(' ')}
               onClick={() => setSelected(c.iso)}
             >
               <div className="d-num">{c.day}</div>
               <div className={`d-lun ${c.isHoliday ? 'holiday' : ''}`}>{c.lunar || ' '}</div>
-              {c.tasks.length > 0 && (
+              {sortedTasks.length > 0 && (
                 <div className="d-dots">
-                  {c.tasks.slice(0, 3).map((t, i) => (
-                    <span key={i} className={`dot ${t.kind}`} />
+                  {sortedTasks.slice(0, 3).map((t, i) => (
+                    <span key={i} className={`dot ${t.flagged ? 'flag' : t.kind}`} />
                   ))}
-                  {c.tasks.length > 3 && <span className="dot more">+{c.tasks.length - 3}</span>}
+                  {sortedTasks.length > 3 && <span className="dot more">+{sortedTasks.length - 3}</span>}
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -2233,7 +2279,17 @@ const CalendarPanel = ({ openProject }) => {
           {selectedTasks.length === 0 ? (
             <div className="cal-empty">这一天没有安排</div>
           ) : (
-            selectedTasks.map(item => (
+            // Order day-detail rows the same way the home lists do:
+            // flagged first, then by label (project code for actions, tag
+            // for loose tasks), then by title.
+            selectedTasks.slice().sort((a, b) => {
+              if (!!a.flagged !== !!b.flagged) return a.flagged ? -1 : 1;
+              const la = a.kind === 'project' ? (projectMap[a.project]?.code || '') : (a.tag || '');
+              const lb = b.kind === 'project' ? (projectMap[b.project]?.code || '') : (b.tag || '');
+              const cmp = la.localeCompare(lb, 'zh-Hans-CN');
+              if (cmp !== 0) return cmp;
+              return (a.title || '').localeCompare(b.title || '', 'zh-Hans-CN');
+            }).map(item => (
               <CalRow key={item.kind + item.id} item={item} openProject={openProject} projectMap={projectMap} />
             ))
           )}
@@ -2243,12 +2299,24 @@ const CalendarPanel = ({ openProject }) => {
   );
 };
 
+const FlagDot = () => (
+  <span
+    title="标红"
+    style={{
+      width: 8, height: 8, borderRadius: '50%',
+      background: 'var(--rust)', flexShrink: 0,
+      boxShadow: '0 0 0 2px rgba(178,80,60,0.18)',
+    }}
+  />
+);
+
 const CalRow = ({ item, openProject, projectMap }) => {
   if (item.kind === 'project') {
     const p = projectMap[item.project];
     if (!p) return null;
     return (
-      <div className="cal-row" onClick={() => openProject(p.id)}>
+      <div className={`cal-row ${item.flagged ? 'flagged' : ''}`} onClick={() => openProject(p.id)}>
+        {item.flagged && <FlagDot />}
         <span className={`cal-tag proj`}>项目</span>
         <span className="code">{p.code}</span>
         <span className="title">{item.title}</span>
@@ -2259,7 +2327,8 @@ const CalRow = ({ item, openProject, projectMap }) => {
     );
   }
   return (
-    <div className="cal-row">
+    <div className={`cal-row ${item.flagged ? 'flagged' : ''}`}>
+      {item.flagged && <FlagDot />}
       <span className={`cal-tag loose`}>杂事</span>
       <span className="title">{item.title}</span>
       {item.tag && <span className="chip dim sm">{item.tag}</span>}

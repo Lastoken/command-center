@@ -1293,11 +1293,11 @@ button { font-family: inherit; }
   font-size: 10.5px;
   padding: 2px 8px;
   border-radius: 3px;
-  border: 1px solid transparent;
+  border: none;
   color: rgba(0, 0, 0, 0.78);
   letter-spacing: 0.02em;
   flex-shrink: 0;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.06);
 }
 .cal-tag.proj {
   color: var(--accent);
@@ -1538,14 +1538,14 @@ button { font-family: inherit; }
   line-height: 1.35;
   padding: 1px 5px;
   border-radius: 3px;
-  border: 1px solid transparent;
+  border: none;
   color: rgba(0, 0, 0, 0.78);
   letter-spacing: 0.02em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.06);
 }
 .cal-cell .sticky-more {
   font-family: var(--font-mono);

@@ -23,7 +23,7 @@ const StickyChip = ({ task, kindMap, projectMap }) => {
     <div
       className="sticky-chip"
       title={`${s.title || task.title}${task.flagged ? ' · 重要' : ''}`}
-      style={{ background: s.bg, borderColor: s.border }}>
+      style={{ background: s.bg }}>
       {s.label}
     </div>
   );
@@ -582,7 +582,7 @@ const CalRow = ({ item, openProject, projectMap, kindMap }) => {
       {item.flagged && <FlagDot />}
       <span
         className="sticky-chip cal-detail-sticky"
-        style={{ background: s.bg, borderColor: s.border }}>
+        style={{ background: s.bg }}>
         {s.label}
       </span>
       <span className="title">{item.title}</span>

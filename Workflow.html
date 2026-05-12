@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=d0f5eed6">
+<link rel="stylesheet" href="styles.css?v=5fb98cb8">
 </head>
 <body>
 <div id="root"></div>
@@ -1866,7 +1866,7 @@ const StickyChip = ({ task, kindMap, projectMap }) => {
     <div
       className="sticky-chip"
       title={`${s.title || task.title}${task.flagged ? ' · 重要' : ''}`}
-      style={{ background: s.bg, borderColor: s.border }}>
+      style={{ background: s.bg }}>
       {s.label}
     </div>
   );
@@ -2425,7 +2425,7 @@ const CalRow = ({ item, openProject, projectMap, kindMap }) => {
       {item.flagged && <FlagDot />}
       <span
         className="sticky-chip cal-detail-sticky"
-        style={{ background: s.bg, borderColor: s.border }}>
+        style={{ background: s.bg }}>
         {s.label}
       </span>
       <span className="title">{item.title}</span>

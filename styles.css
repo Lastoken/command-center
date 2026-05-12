@@ -1602,13 +1602,21 @@ button { font-family: inherit; }
   .page-head .sub { font-size: 12px; }
   .page-head .right { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
 
-  /* Hero: stats wrap underneath title. */
-  .cmd-hero { flex-wrap: wrap; padding: 16px; }
-  .cmd-hero h1 { font-size: 18px; line-height: 1.5; }
-  .cmd-hero .meta-line { font-size: 11.5px; flex-wrap: wrap; row-gap: 4px; }
-  .hero-stats { width: 100%; margin-top: 8px; }
-  .hero-stats .cell { flex: 1; min-width: 0; padding: 8px 6px; }
+  /* Hero is `display: grid` on desktop — collapse to a single column on
+     mobile so the title block and the stats block stack instead of being
+     squeezed side-by-side. */
+  .cmd-hero {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    align-items: stretch !important;
+    padding: 16px 0 14px;
+  }
+  .cmd-hero h1 { font-size: 20px; line-height: 1.45; }
+  .cmd-hero .meta-line { font-size: 11.5px; flex-wrap: wrap; gap: 8px; row-gap: 4px; }
+  .hero-stats { width: 100%; grid-template-columns: repeat(3, 1fr) !important; }
+  .hero-stats .cell { padding: 10px 8px; }
   .hero-stats .v { font-size: 22px; }
+  .hero-stats.compact .cell { padding: 10px 8px; }
 
   /* Home: stack panels vertically. */
   .home-grid, .home-grid.equal { grid-template-columns: 1fr !important; gap: 12px; }
@@ -1660,15 +1668,27 @@ button { font-family: inherit; }
   /* Notes view: single column. */
   .notes-grid { grid-template-columns: 1fr !important; }
 
-  /* Bottom quick-add: keep fixed at viewport bottom on mobile. */
+  /* Bottom quick-add: full width at viewport bottom on mobile.
+     Desktop centers it via `left: 50%; transform: translateX(-50%)` — both
+     have to be reset to !important here, otherwise the bar drifts off the
+     left edge of the screen. */
   .quick-bar {
     position: fixed;
-    bottom: 0; left: 0; right: 0;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    transform: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    border-radius: 0 !important;
     z-index: 50;
-    padding: 8px 12px;
+    padding: 10px 12px env(safe-area-inset-bottom, 8px);
     border-top: 1px solid var(--line);
     background: var(--bg-elev);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
   }
+  .quick-bar input { min-width: 0; flex: 1; }
   .quick-bar .hint { display: none; }
 
   /* Buttons: bigger touch targets. */

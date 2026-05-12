@@ -1509,9 +1509,9 @@ button { font-family: inherit; }
 .cal-cell.today .d-lun.holiday { color: rgba(255,255,255,0.95); }
 
 .cal-cell .d-dots {
-  display: flex; gap: 3px; align-items: center;
+  display: flex; gap: 4px; align-items: center;
   margin-top: 4px;
-  min-height: 12px;
+  min-height: 14px;
 }
 .cal-cell .d-dots .mini-flag { color: var(--accent); }
 .cal-cell .d-dots .mini-flag.flagged { color: var(--rust); }
@@ -1657,8 +1657,8 @@ button { font-family: inherit; }
   .cal-cell { min-height: 52px; padding: 4px; font-size: 11px; }
   .cal-cell .d-num { font-size: 12px; }
   .cal-cell .d-lun { font-size: 9px; }
-  .cal-cell .d-dots { gap: 2px; min-height: 9px; }
-  .cal-cell .d-dots .mini-flag { width: 8px; height: 8px; }
+  .cal-cell .d-dots { gap: 3px; min-height: 12px; }
+  .cal-cell .d-dots .mini-flag { width: 11px; height: 11px; }
 
   /* Tools: single column. */
   .tools-grid { grid-template-columns: 1fr !important; }
@@ -1756,6 +1756,17 @@ button { font-family: inherit; }
   border-color: transparent var(--rust) transparent transparent;
   pointer-events: none;
   border-top-right-radius: 6px;
+}
+/* Bottom red stripe across the cell — another redundant signal so flagged
+   days are unmissable when scanning a busy month. */
+.cal-cell.has-flag::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 4px; right: 4px;
+  height: 3px;
+  background: var(--rust);
+  border-radius: 2px;
+  pointer-events: none;
 }
 .cal-cell.has-flag:not(.today) .d-num {
   color: var(--rust);

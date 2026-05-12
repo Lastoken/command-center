@@ -3,16 +3,17 @@
 
 const TODAY = '2026-05-12';
 
-// Tiny filled flag used in calendar cells. Color is driven by the
-// `mini-flag.flagged` CSS class so the "today" cell can override.
+// Filled flag used in calendar cells — chunky enough to read at a glance.
+// Color is driven by the `mini-flag.flagged` CSS class so the "today" cell
+// can override (white on blue background).
 const MiniFlag = ({ flagged }) => (
   <svg
     className={`mini-flag ${flagged ? 'flagged' : ''}`}
-    width={10} height={10} viewBox="0 0 24 24"
+    width={14} height={14} viewBox="0 0 24 24"
     aria-hidden="true"
     style={{ flexShrink: 0 }}>
-    <path d="M5 4v17" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" fill="none" />
-    <path d="M5 4h13l-2.5 4 2.5 4H5z" fill="currentColor" />
+    <rect x="4" y="3" width="2.6" height="18.5" fill="currentColor" rx="0.6" />
+    <path d="M6.6 3.6h13l-3 4.4 3 4.4h-13z" fill="currentColor" />
   </svg>
 );
 

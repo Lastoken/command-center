@@ -2080,21 +2080,58 @@ const LooseTasksPanel = () => {
   );
 };
 
-/* ──────────────── Inline row menu (⋯) ──────────────── */
+/* ──────────────── Inline row menu (⋯) ────────────────
+   Uses position: fixed for the dropdown so it escapes the parent panel's
+   overflow clipping. If there's not enough room below the button (e.g. the
+   row is the last one in the list), it flips above. */
 const RowMenu = ({ flagged, onToggleFlag, onEdit, onDelete }) => {
   const [open, setOpen] = React.useState(false);
+  const [pos, setPos] = React.useState(null);
   const ref = React.useRef(null);
+  const btnRef = React.useRef(null);
+
+  const itemCount = (onToggleFlag ? 1 : 0) + 1 /* edit */ + 1 /* delete */;
+  const menuHeight = itemCount * 30 + 8; // ~30px per row + padding
+
+  const computePos = React.useCallback(() => {
+    const btn = btnRef.current;
+    if (!btn) return null;
+    const r = btn.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - r.bottom;
+    const spaceAbove = r.top;
+    const flipUp = spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow;
+    return {
+      top: flipUp ? Math.max(8, r.top - menuHeight - 4) : r.bottom + 4,
+      right: Math.max(8, window.innerWidth - r.right),
+    };
+  }, [menuHeight]);
+
+  const openMenu = (e) => {
+    e.stopPropagation();
+    if (open) { setOpen(false); return; }
+    setPos(computePos());
+    setOpen(true);
+  };
+
   React.useEffect(() => {
     if (!open) return;
     const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onScroll = () => setPos(computePos());
     window.addEventListener('mousedown', onDoc);
-    return () => window.removeEventListener('mousedown', onDoc);
-  }, [open]);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [open, computePos]);
 
   return (
     <span ref={ref} style={{ position: 'relative', marginLeft: 4, flexShrink: 0 }}>
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
+        ref={btnRef}
+        onClick={openMenu}
         title="操作"
         style={{
           appearance: 'none', border: 'none', background: 'transparent',
@@ -2107,13 +2144,14 @@ const RowMenu = ({ flagged, onToggleFlag, onEdit, onDelete }) => {
       >
         <I.More size={13} />
       </button>
-      {open && (
+      {open && pos && (
         <div style={{
-          position: 'absolute', right: 0, top: '100%', marginTop: 2,
+          position: 'fixed',
+          top: pos.top, right: pos.right,
           background: 'var(--bg-elev)', border: '1px solid var(--line)',
           borderRadius: 6, padding: 4, minWidth: 110,
-          boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
-          zIndex: 50, fontSize: 12,
+          boxShadow: '0 6px 18px rgba(0,0,0,0.16)',
+          zIndex: 500, fontSize: 12,
         }}>
           {onToggleFlag && (
             <div onClick={(e) => { setOpen(false); onToggleFlag(e); }}

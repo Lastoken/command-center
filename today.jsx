@@ -129,7 +129,7 @@ const sortActions = (arr, projectMap) => arr.slice().sort((a, b) => {
 });
 
 const ProjectTasksPanel = ({ openProject }) => {
-  const { actions, projects, projectMap } = useStore();
+  const { actions, projects, projectMap, kinds } = useStore();
   const open = sortActions(actions.filter(t => !t.done), projectMap);
   const done = sortActions(actions.filter(t => t.done), projectMap);
   const list = [...open, ...done];
@@ -177,8 +177,11 @@ const ProjectTasksPanel = ({ openProject }) => {
                 <svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>
               </div>
               <span
-                className="code"
-                style={{ width: 56, flexShrink: 0, cursor: 'pointer' }}
+                style={{
+                  ...projectCodeChipStyle(p, kinds),
+                  flexShrink: 0,
+                  cursor: 'pointer',
+                }}
                 onClick={() => openProject(p.id)}
                 title={`打开 ${p.name}`}>
                 {p.code}

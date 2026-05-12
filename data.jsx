@@ -711,6 +711,26 @@ function looseColor() {
   return KIND_COLORS.find(c => c.id === LOOSE_COLOR_ID) || KIND_COLORS[0];
 }
 
+// Inline style for rendering a PRJ-XXX code as a sticky-note pill in the
+// project's category color. Used wherever a project code is shown so the
+// visual association (color ↔ category) stays consistent across pages.
+function projectCodeChipStyle(project, kinds) {
+  const c = kindColor(project && project.kind, kinds);
+  return {
+    background: c.bg,
+    color: 'rgba(0,0,0,0.78)',
+    padding: '1.5px 7px',
+    borderRadius: 3,
+    boxShadow: '0 1px 1.5px rgba(0, 0, 0, 0.06)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 11,
+    letterSpacing: '0.02em',
+    fontWeight: 500,
+    display: 'inline-block',
+    whiteSpace: 'nowrap',
+  };
+}
+
 /* ───────────────────── Gist sync ─────────────────────
    Personal cloud via a GitHub Gist:
      - User generates a Personal Access Token with `gist` scope (one-time).
@@ -1055,7 +1075,7 @@ function ConfirmDialog({ title, message, confirmLabel = '确认', danger, onConf
 
 Object.assign(window, {
   STAGE, STAGE_LIST, KIND, COMMANDS, KIND_COLORS, LOOSE_COLOR_ID,
-  Store, useStore, fuzzyMatch, dailyPick, kindLabel, kindColor, looseColor,
+  Store, useStore, fuzzyMatch, dailyPick, kindLabel, kindColor, looseColor, projectCodeChipStyle,
   GistSync,
   openModal, closeModal, registerModalSetter,
   Modal, Field, TextInput, TextArea, Select, ConfirmDialog,

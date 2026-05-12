@@ -741,7 +741,7 @@ const ProjectsView = ({ openProject }) => {
                 <span className={`pl-caret ${isOpen ? 'open' : ''}`}>
                   <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
                 </span>
-                <span className="code">{p.code}</span>
+                <span style={{ ...projectCodeChipStyle(p, kinds), flexShrink: 0 }}>{p.code}</span>
                 <span className="pl-name">{p.name}</span>
                 {p.priority === 'high' && !isDormant && (
                   <span className="chip rust" title="高优先级">高优</span>
@@ -871,7 +871,7 @@ const ProjectDetail = ({ projectId, back }) => {
         </button>
 
         <div className="proj-header">
-          <div className="pcode">{p.code}</div>
+          <div style={{ ...projectCodeChipStyle(p, kinds), padding: '4px 10px', fontSize: 12 }}>{p.code}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1>{p.name}</h1>
             <div className="meta">
@@ -1192,7 +1192,7 @@ const CompareTab = () => (
    NOTES (aggregated across projects)
    ════════════════════════════════════════════════════════════════════════ */
 const NotesView = ({ openProject }) => {
-  const { notes, projectMap, projects } = useStore();
+  const { notes, projectMap, projects, kinds } = useStore();
   const byProject = {};
   notes.forEach(n => {
     if (!byProject[n.project]) byProject[n.project] = [];
@@ -1241,7 +1241,7 @@ const NotesView = ({ openProject }) => {
                   width: 8, height: 8, borderRadius: '50%',
                   background: stageColor(p.stage),
                 }} />
-                <span className="pcode">{p.code}</span>
+                <span style={{ ...projectCodeChipStyle(p, kinds), flexShrink: 0 }}>{p.code}</span>
                 <span className="pname">{p.name}</span>
                 <span className="chip dim" style={{ marginLeft: 8 }}>{STAGE[p.stage].label}</span>
                 <span className="pcount">{byProject[pid].length} 条笔记</span>
@@ -1336,7 +1336,7 @@ const ReviewView = () => {
               gap: 14,
               alignItems: 'center',
             }}>
-              <span className="code">{p.code}</span>
+              <span style={{ ...projectCodeChipStyle(p, kinds), flexShrink: 0 }}>{p.code}</span>
               <div>
                 <div style={{ fontSize: 13.5, color: 'var(--fg-strong)' }}>{p.name}</div>
                 <div style={{ fontSize: 11.5, color: 'var(--fg-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>

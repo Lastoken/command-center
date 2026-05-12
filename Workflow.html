@@ -786,6 +786,26 @@ function looseColor() {
   return KIND_COLORS.find(c => c.id === LOOSE_COLOR_ID) || KIND_COLORS[0];
 }
 
+// Inline style for rendering a PRJ-XXX code as a sticky-note pill in the
+// project's category color. Used wherever a project code is shown so the
+// visual association (color ↔ category) stays consistent across pages.
+function projectCodeChipStyle(project, kinds) {
+  const c = kindColor(project && project.kind, kinds);
+  return {
+    background: c.bg,
+    color: 'rgba(0,0,0,0.78)',
+    padding: '1.5px 7px',
+    borderRadius: 3,
+    boxShadow: '0 1px 1.5px rgba(0, 0, 0, 0.06)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 11,
+    letterSpacing: '0.02em',
+    fontWeight: 500,
+    display: 'inline-block',
+    whiteSpace: 'nowrap',
+  };
+}
+
 /* ───────────────────── Gist sync ─────────────────────
    Personal cloud via a GitHub Gist:
      - User generates a Personal Access Token with `gist` scope (one-time).
@@ -1130,7 +1150,7 @@ function ConfirmDialog({ title, message, confirmLabel = '确认', danger, onConf
 
 Object.assign(window, {
   STAGE, STAGE_LIST, KIND, COMMANDS, KIND_COLORS, LOOSE_COLOR_ID,
-  Store, useStore, fuzzyMatch, dailyPick, kindLabel, kindColor, looseColor,
+  Store, useStore, fuzzyMatch, dailyPick, kindLabel, kindColor, looseColor, projectCodeChipStyle,
   GistSync,
   openModal, closeModal, registerModalSetter,
   Modal, Field, TextInput, TextArea, Select, ConfirmDialog,
@@ -1972,7 +1992,7 @@ const sortActions = (arr, projectMap) => arr.slice().sort((a, b) => {
 });
 
 const ProjectTasksPanel = ({ openProject }) => {
-  const { actions, projects, projectMap } = useStore();
+  const { actions, projects, projectMap, kinds } = useStore();
   const open = sortActions(actions.filter(t => !t.done), projectMap);
   const done = sortActions(actions.filter(t => t.done), projectMap);
   const list = [...open, ...done];
@@ -2020,8 +2040,11 @@ const ProjectTasksPanel = ({ openProject }) => {
                 <svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>
               </div>
               <span
-                className="code"
-                style={{ width: 56, flexShrink: 0, cursor: 'pointer' }}
+                style={{
+                  ...projectCodeChipStyle(p, kinds),
+                  flexShrink: 0,
+                  cursor: 'pointer',
+                }}
                 onClick={() => openProject(p.id)}
                 title={`打开 ${p.name}`}>
                 {p.code}
@@ -3201,7 +3224,7 @@ const ProjectsView = ({ openProject }) => {
                 <span className={`pl-caret ${isOpen ? 'open' : ''}`}>
                   <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
                 </span>
-                <span className="code">{p.code}</span>
+                <span style={{ ...projectCodeChipStyle(p, kinds), flexShrink: 0 }}>{p.code}</span>
                 <span className="pl-name">{p.name}</span>
                 {p.priority === 'high' && !isDormant && (
                   <span className="chip rust" title="高优先级">高优</span>
@@ -3331,7 +3354,7 @@ const ProjectDetail = ({ projectId, back }) => {
         </button>
 
         <div className="proj-header">
-          <div className="pcode">{p.code}</div>
+          <div style={{ ...projectCodeChipStyle(p, kinds), padding: '4px 10px', fontSize: 12 }}>{p.code}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1>{p.name}</h1>
             <div className="meta">
@@ -3652,7 +3675,7 @@ const CompareTab = () => (
    NOTES (aggregated across projects)
    ════════════════════════════════════════════════════════════════════════ */
 const NotesView = ({ openProject }) => {
-  const { notes, projectMap, projects } = useStore();
+  const { notes, projectMap, projects, kinds } = useStore();
   const byProject = {};
   notes.forEach(n => {
     if (!byProject[n.project]) byProject[n.project] = [];
@@ -3701,7 +3724,7 @@ const NotesView = ({ openProject }) => {
                   width: 8, height: 8, borderRadius: '50%',
                   background: stageColor(p.stage),
                 }} />
-                <span className="pcode">{p.code}</span>
+                <span style={{ ...projectCodeChipStyle(p, kinds), flexShrink: 0 }}>{p.code}</span>
                 <span className="pname">{p.name}</span>
                 <span className="chip dim" style={{ marginLeft: 8 }}>{STAGE[p.stage].label}</span>
                 <span className="pcount">{byProject[pid].length} 条笔记</span>
@@ -3796,7 +3819,7 @@ const ReviewView = () => {
               gap: 14,
               alignItems: 'center',
             }}>
-              <span className="code">{p.code}</span>
+              <span style={{ ...projectCodeChipStyle(p, kinds), flexShrink: 0 }}>{p.code}</span>
               <div>
                 <div style={{ fontSize: 13.5, color: 'var(--fg-strong)' }}>{p.name}</div>
                 <div style={{ fontSize: 11.5, color: 'var(--fg-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
